@@ -1,6 +1,10 @@
-const dotenv = require("dotenv");
-const mongoose = require("mongoose");
-const app = require("./app.js");
+// const dotenv = require("dotenv");
+// const mongoose = require("mongoose");
+// const app = require("./app.js");
+
+import dotenv from "dotenv";
+import mongoose from "mongoose";
+import app from "./app.js";
 
 dotenv.config({ path: "./config.env" });
 
