@@ -2,6 +2,7 @@
 // const userControlller = require("./../controllers/userController");
 import express from "express";
 import * as userControlller from "./../controllers/userController.js";
+import * as authControlller from "./../controllers/authController.js";
 
 const router = express.Router();
 
@@ -9,6 +10,17 @@ router
   .route("/")
   .get(userControlller.getAllUsers)
   .post(userControlller.createUser);
+
+router
+  .route("/updateMe")
+  .patch(authControlller.requireSignIn, userControlller.updateMe);
+router
+  .route("/deleteMe")
+  .delete(authControlller.requireSignIn, userControlller.deleteMe);
+
+router
+  .route("/updatePassword")
+  .post(authControlller.requireSignIn, authControlller.updatePassword);
 
 router
   .route("/:id")

@@ -1,99 +1,111 @@
-// const User = require("../models/userModel.js");
 import express from "express";
 import User from "../models/userModel.js";
-// import "User" from "../models/userModel.js";
+import appError from "./../utils/appError.js";
+
+export const filterObj = (obj, ...allowedFields) => {
+  const newObj = {};
+  Object.keys(obj).forEach((el) => {
+    if (allowedFields.includes(el)) {
+      newObj[el] = obj[el];
+    }
+  });
+  return newObj;
+};
+
+//prettier-ignore
+const sendSuccessResponse = function (res,statusCode,value,type="user",noOfResults) {
+  let response = { status: "Success" };
+  if (noOfResults) response.results = noOfResults;
+  if (value) {
+    response.data = {};
+    response.data[type] = value;
+  }
+  res.status(statusCode).json(response);
+};
 
 export async function getAllUsers(req, res, next) {
   try {
     const users = await User.find();
-    res.status(200).json({
-      status: "success",
-      results: users.length,
-      data: {
-        users,
-      },
-    });
+    sendSuccessResponse(res, 200, users, "users", users.length);
   } catch (err) {
-    res.status(400).json({
-      status: "fail",
-      err: err.message,
-    });
+    next(err);
   }
 }
 
 export async function createUser(req, res, next) {
   try {
     const newUser = await User.create(req.body);
-    res.status(200).json({
-      status: "success",
-      data: {
-        user: newUser,
-      },
-    });
+    newUser.password = undefined;
+    sendSuccessResponse(res, 201, newUser);
   } catch (err) {
-    // console.log(err);
-    res.status(400).json({
-      status: "fail",
-      err,
-    });
+    next(err);
   }
 }
 
 export async function getUserById(req, res, next) {
   try {
     const user = await User.findById(req.params.id);
-    if (!user) return res.status(404).json({ message: "User not found!" });
-    res.status(200).json({
-      status: "success",
-      data: {
-        user,
-      },
-    });
+    if (!user) return next(new appError("User not found!", 404));
+
+    sendSuccessResponse(res, 200, user);
   } catch (err) {
-    console.log(err);
-    res.status(400).json({
-      status: "fail",
-      err,
-    });
+    next(err);
   }
 }
 
 export async function updateUserById(req, res, next) {
   try {
-    req.body.updated = Date.now(); // to set the updated field we add it to req.body which is used for updating in next line
+    req.body.updated = Date.now();
     const user = await User.findByIdAndUpdate(req.params.id, req.body, {
       runValidators: true,
       new: true,
     });
 
-    if (!user) return res.status(404).json({ message: "User not found!" });
-    res.status(200).json({
-      status: "success",
-      data: {
-        user,
-      },
-    });
+    if (!user) return next(new appError("User not found!", 404));
+
+    sendSuccessResponse(res, 200, user);
   } catch (err) {
-    console.log(err);
-    res.status(400).json({
-      status: "fail",
-      err,
-    });
+    next(err);
   }
 }
 
 export async function deleteUserById(req, res, next) {
   try {
     const user = await User.findByIdAndDelete(req.params.id);
-    if (!user) return res.status(404).json({ message: "User not found!" });
-    res.status(204).json({
-      status: "success",
-    });
+    if (!user) return next(new appError("User not found!", 404));
+
+    sendSuccessResponse(res, 204, null);
   } catch (err) {
-    console.log(err);
-    res.status(400).json({
-      status: "fail",
-      err,
+    next(err);
+  }
+}
+
+// ONLY FOR UPDATING NAME AND EMAIL
+export async function updateMe(req, res, next) {
+  try {
+    if (req.body.password || req.body.passwordConfirm)
+      return next(new appError("Go to /updatePassword!", 400));
+    let updates = filterObj(req.body, "name", "email");
+    updates.updated = Date.now();
+
+    const user = await User.findByIdAndUpdate(req.user._id, updates, {
+      runValidators: true,
+      new: true,
     });
+
+    if (!user) return next(new appError("User not found!", 404));
+
+    sendSuccessResponse(res, 200, user);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function deleteMe(req, res, next) {
+  try {
+    await User.findByIdAndDelete(req.user.id);
+    sendSuccessResponse(res, 204, null);
+  } catch (err) {
+    next(err);
   }
 }

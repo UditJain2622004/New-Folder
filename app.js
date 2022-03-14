@@ -16,6 +16,8 @@ import cookieparser from "cookie-parser";
 
 // const userRouter = require("./routes/userRoutes");
 import userRouter from "./routes/userRoutes.js";
+import authRouter from "./routes/authRoutes.js";
+import globalErrorHandler from "./controllers/errorController.js";
 
 const app = express();
 
@@ -26,11 +28,9 @@ app.use(compression());
 app.use(bodyparser.json());
 app.use(bodyparser.urlencoded({ extended: true }));
 
-app.get("/", function (req, res) {
-  res.send("hi");
-});
-
 app.use("/api/users", userRouter);
+app.use("/api/auth", authRouter);
 
-// module.exports = app;
+app.use(globalErrorHandler);
+
 export default app;
