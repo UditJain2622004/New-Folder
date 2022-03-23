@@ -17,6 +17,8 @@ import cookieparser from "cookie-parser";
 // const userRouter = require("./routes/userRoutes");
 import userRouter from "./routes/userRoutes.js";
 import authRouter from "./routes/authRoutes.js";
+import shopRouter from "./routes/shopRoutes.js";
+import productRouter from "./routes/productRoutes.js";
 import globalErrorHandler from "./controllers/errorController.js";
 
 const app = express();
@@ -30,6 +32,8 @@ app.use(bodyparser.urlencoded({ extended: true }));
 
 app.use("/api/users", userRouter);
 app.use("/api/auth", authRouter);
+app.use("/api/shops", shopRouter);
+app.use("/api/products", productRouter);
 
 app.use(globalErrorHandler);
 

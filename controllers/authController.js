@@ -2,7 +2,7 @@ import express from "express";
 import jwt from "jsonwebtoken";
 import User from "../models/userModel.js";
 import util from "util";
-import { filterObj } from "./userController.js";
+import { filterObj } from "./../utils/functions.js";
 import appError from "./../utils/appError.js";
 
 const signToken = (id) => {
@@ -37,7 +37,7 @@ const createSendToken = (user, res, statusCode) => {
 export const signup = async (req, res, next) => {
   try {
     //prettier-ignore
-    const details = filterObj(req.body,"name","email","password","passwordConfirm");
+    const details = filterObj(req.body,"name","email","password","passwordConfirm","isSeller");
 
     const user = await User.create(details);
 

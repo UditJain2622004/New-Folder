@@ -47,6 +47,9 @@ const userSchema = new mongoose.Schema({
     type: Date,
     select: false,
   },
+  isSeller: {
+    type: Boolean,
+  },
 });
 
 userSchema.pre("save", async function (next) {

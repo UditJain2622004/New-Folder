@@ -23,7 +23,7 @@ router
   .post(authControlller.requireSignIn, authControlller.updatePassword);
 
 router
-  .route("/:id")
+  .route("/:userId")
   .get(userControlller.getUserById)
   .patch(userControlller.updateUserById)
   .delete(userControlller.deleteUserById);
