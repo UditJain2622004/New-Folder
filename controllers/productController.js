@@ -4,6 +4,7 @@ import Shop from "./../models/shopModel.js";
 import { sendSuccessResponse, filterObj } from "./../utils/functions.js";
 import appError from "./../utils/appError.js";
 import APIFeatures from "./../utils/features.js";
+import mongoose from "mongoose";
 
 export const getAllProducts = async (req, res, next) => {
   try {
@@ -22,6 +23,12 @@ export const getAllProducts = async (req, res, next) => {
 export const createProduct = async (req, res, next) => {
   try {
     const product = await Product.create(req.body);
+    if (req.body.shop) {
+      await Shop.updateOne(
+        { _id: req.body.shop },
+        { $push: { products: product._id } }
+      );
+    }
     sendSuccessResponse(res, 201, product, "product");
   } catch (err) {
     next(err);
@@ -32,6 +39,11 @@ export const getOneProduct = async (req, res, next) => {
   try {
     const product = await Product.findById(req.params.productId);
     if (!product) return next(new appError("Product not found!", 400));
+
+    // const shops = await Shop.find({                                    //SHOPS HAVING THIS PRODUCT
+    //   products: { $in: [mongoose.Types.ObjectId(product._id)] },
+    // });
+
     sendSuccessResponse(res, 200, product, "product");
   } catch (err) {
     next(err);
@@ -67,8 +79,13 @@ export const deleteProduct = async (req, res, next) => {
 
 export const getProductsByShop = async (req, res, next) => {
   try {
-    const products = await Product.find({ shop: req.params.shopId });
-    sendSuccessResponse(res, 200, products, "products", products.length);
+    // const products = await Product.find({ shop: req.params.shopId });
+    const products = await req.shop.populate({
+      path: "products",
+      select: " -created -__v",
+    });
+    //prettier-ignore
+    sendSuccessResponse(res,200,products.products,"products",products.products.length);
   } catch (err) {
     next(err);
   }
@@ -77,8 +94,10 @@ export const getProductsByShop = async (req, res, next) => {
 export const createMyProduct = async (req, res, next) => {
   try {
     const details = filterObj(req.body, "name", "quantity", "price");
-    details.shop = req.shop._id;
+    // details.shop = req.shop._id;
     const product = await Product.create(details);
+    req.shop.products.push(product._id);
+    await req.shop.save();
     sendSuccessResponse(res, 201, product, "product");
   } catch (err) {
     next(err);
@@ -106,7 +125,10 @@ export const updateMyProduct = async (req, res, next) => {
 
 export const deleteMyProduct = async (req, res, next) => {
   try {
-    await Product.findByIdAndDelete(req.params.productId);
+    req.shop.products.pull(req.params.productId);
+    await req.shop.save();
+    // console.log(req.shop.products);
+    // await Product.findByIdAndDelete(req.params.productId);
     sendSuccessResponse(res, 204);
   } catch (err) {
     next(err);

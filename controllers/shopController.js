@@ -48,6 +48,8 @@ export const getShopsOfAUser = async (req, res, next) => {
 export const getOneShop = async (req, res, next) => {
   try {
     const shop = await Shop.findById(req.params.shopId);
+    // .populate({ path: "owner", select: "_id email name" })
+    // .populate({ path: "products", select: "-__v -created" });
     if (!shop) return next(new appError("No shop found!", 404));
     sendSuccessResponse(res, 200, shop, "shop");
   } catch (err) {

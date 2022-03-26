@@ -18,9 +18,9 @@ router
   .route("/deleteMe")
   .delete(authControlller.requireSignIn, userControlller.deleteMe);
 
-router
-  .route("/updatePassword")
-  .post(authControlller.requireSignIn, authControlller.updatePassword);
+// router
+//   .route("/updatePassword")
+//   .post(authControlller.requireSignIn, authControlller.updatePassword);
 
 router
   .route("/:userId")

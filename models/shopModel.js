@@ -19,15 +19,26 @@ const shopSchema = new mongoose.Schema({
     ref: "User",
     required: [true, "Shop must have an owner"],
   },
-  // product:[{
-  //   type:mongoose.Schema.ObjectId,
-  //   ref:"Product"
-  // }],
+  products: [
+    {
+      type: mongoose.Schema.ObjectId,
+      ref: "Product",
+    },
+  ],
   created: {
     type: Date,
     default: Date.now,
   },
   updated: Date,
+});
+
+shopSchema.pre(/^findBy/, function (next) {
+  this.populate({ path: "owner", select: "_id email name" }).populate({
+    path: "products",
+    select: "-__v -created",
+  });
+  console.log("yes");
+  next();
 });
 
 const Shop = mongoose.model("Shop", shopSchema);

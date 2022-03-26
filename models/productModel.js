@@ -26,11 +26,11 @@ const productSchema = new mongoose.Schema({
     type: Number,
     required: [true, "Price is required"],
   },
-  shop: {
-    type: mongoose.Schema.ObjectId,
-    ref: "Shop",
-    required: [true, "Shop is required"],
-  },
+  // shop: {
+  //   type: mongoose.Schema.ObjectId,
+  //   ref: "Shop",
+  //   required: [true, "Shop is required"],
+  // },
   created: {
     type: Date,
     default: Date.now,
