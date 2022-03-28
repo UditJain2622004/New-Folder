@@ -32,14 +32,23 @@ const shopSchema = new mongoose.Schema({
   updated: Date,
 });
 
-shopSchema.pre(/^findBy/, function (next) {
-  this.populate({ path: "owner", select: "_id email name" }).populate({
-    path: "products",
-    select: "-__v -created",
-  });
-  console.log("yes");
-  next();
-});
+// shopSchema.pre(/^find/, function (next) {
+//   this.populate({ path: "owner", select: "_id email name" }).populate({
+//     path: "products",
+//     select: "-__v -created",
+//   });
+//   console.log("yes");
+//   next();
+// });
+
+// shopSchema.methods.myPopulate = function (next) {
+//   this.populate({ path: "owner", select: "_id email name" }).populate({
+//     path: "products",
+//     select: "-__v -created",
+//   });
+//   console.log("yes");
+//   next();
+// };
 
 const Shop = mongoose.model("Shop", shopSchema);
 

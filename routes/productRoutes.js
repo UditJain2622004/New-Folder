@@ -33,12 +33,12 @@ router
     shopController.shopById,
     shopController.isOwner,
     productController.updateMyProduct
-  )
-  .delete(
-    authController.requireSignIn,
-    shopController.shopById,
-    shopController.isOwner,
-    productController.deleteMyProduct
   );
+// .delete(
+//   authController.requireSignIn,
+//   shopController.shopById,
+//   shopController.isOwner,
+//   productController.removeProductsFromMyShop
+// );
 
 export default router;

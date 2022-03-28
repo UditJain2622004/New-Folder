@@ -1,9 +1,23 @@
 import express from "express";
 import mongoose from "mongoose";
 import Shop from "./../models/shopModel.js";
+import Product from "./../models/productModel.js";
 import User from "./../models/userModel.js";
 import { sendSuccessResponse, filterObj } from "./../utils/functions.js";
 import appError from "./../utils/appError.js";
+
+const addShopToProducts = (products, shopId) => {
+  products.forEach(async (el) => {
+    await Product.updateOne({ _id: el }, { $push: { shops: shopId } });
+  });
+};
+
+const removeShopFromProducts = (products, shopId) => {
+  products.forEach(
+    async (el) =>
+      await Product.updateOne({ _id: el }, { $pull: { shops: shopId } })
+  );
+};
 
 export const shopById = async (req, res, next) => {
   try {
@@ -47,9 +61,9 @@ export const getShopsOfAUser = async (req, res, next) => {
 
 export const getOneShop = async (req, res, next) => {
   try {
-    const shop = await Shop.findById(req.params.shopId);
-    // .populate({ path: "owner", select: "_id email name" })
-    // .populate({ path: "products", select: "-__v -created" });
+    const shop = await Shop.findById(req.params.shopId)
+      .populate({ path: "owner", select: "_id email name" })
+      .populate({ path: "products", select: "-__v -created" });
     if (!shop) return next(new appError("No shop found!", 404));
     sendSuccessResponse(res, 200, shop, "shop");
   } catch (err) {
@@ -63,7 +77,9 @@ export const updateShop = async (req, res, next) => {
     const shop = await Shop.findByIdAndUpdate(req.params.shopId, req.body, {
       runValidators: true,
       new: true,
-    });
+    })
+      .populate({ path: "owner", select: "_id email name" })
+      .populate({ path: "products", select: "-__v -created" });
 
     if (!shop) return next(new appError("Shop not found!", 404));
 
@@ -113,6 +129,36 @@ export const createMyShop = async (req, res, next) => {
   }
 };
 
+export const addProductToMyShop = async (req, res, next) => {
+  try {
+    // req.shop.products.push(req.params.productId);
+    const shop = await Shop.findByIdAndUpdate(
+      req.shop._id,
+      { $addToSet: { products: { $each: req.body.products } } },
+      { runValidators: true, new: true }
+    );
+    addShopToProducts(req.body.products, req.shop._id);
+    sendSuccessResponse(res, 200, shop, "shop");
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const removeProductsFromMyShop = async (req, res, next) => {
+  try {
+    const shop = await Shop.findByIdAndUpdate(
+      req.shop._id,
+      { $pull: { products: { $in: req.body.products } } },
+      { runValidators: true, new: true }
+    );
+    removeShopFromProducts(req.body.products, req.shop._id);
+
+    sendSuccessResponse(res, 204);
+  } catch (err) {
+    next(err);
+  }
+};
+
 export const getMyShops = async (req, res, next) => {
   try {
     const shops = await Shop.find({ owner: req.user._id });
@@ -128,7 +174,8 @@ export const updateMyShop = async (req, res, next) => {
     const updates = filterObj(req.body, "name", "description");
     updates.updated = Date.now();
     //prettier-ignore
-    const updatedShop = await Shop.findByIdAndUpdate(req.params.shopId, updates, { runValidators: true, new: true });
+    const updatedShop = await Shop.findByIdAndUpdate(req.params.shopId, updates, { runValidators: true, new: true })
+    .populate({ path: "products", select: "-__v -created" });
     sendSuccessResponse(res, 200, updatedShop, "shop");
   } catch (err) {
     next(err);

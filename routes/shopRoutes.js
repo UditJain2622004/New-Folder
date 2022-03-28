@@ -30,6 +30,21 @@ router
   );
 
 router
+  .route("/myshop/:shopId/products")
+  .post(
+    authController.requireSignIn,
+    shopController.shopById,
+    shopController.isOwner,
+    shopController.addProductToMyShop
+  )
+  .delete(
+    authController.requireSignIn,
+    shopController.shopById,
+    shopController.isOwner,
+    shopController.removeProductsFromMyShop
+  );
+
+router
   .route("/:shopId")
   .get(shopController.getOneShop)
   .patch(shopController.updateShop)

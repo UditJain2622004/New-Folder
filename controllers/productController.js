@@ -96,8 +96,10 @@ export const createMyProduct = async (req, res, next) => {
     const details = filterObj(req.body, "name", "quantity", "price");
     // details.shop = req.shop._id;
     const product = await Product.create(details);
+    product.shops.push(req.shop._id);
     req.shop.products.push(product._id);
     await req.shop.save();
+    await product.save();
     sendSuccessResponse(res, 201, product, "product");
   } catch (err) {
     next(err);
@@ -123,14 +125,18 @@ export const updateMyProduct = async (req, res, next) => {
   }
 };
 
-export const deleteMyProduct = async (req, res, next) => {
-  try {
-    req.shop.products.pull(req.params.productId);
-    await req.shop.save();
-    // console.log(req.shop.products);
-    // await Product.findByIdAndDelete(req.params.productId);
-    sendSuccessResponse(res, 204);
-  } catch (err) {
-    next(err);
-  }
-};
+// export const removeProductsFromMyShop = async (req, res, next) => {
+//   try {
+//     req.shop.products.pull(req.params.productId);
+//     await Product.updateOne(
+//       { _id: req.params.productId },
+//       { $pull: { shops: req.shop._id } }
+//     );
+//     await req.shop.save();
+//     // console.log(req.shop.products);
+//     // await Product.findByIdAndDelete(req.params.productId);
+//     sendSuccessResponse(res, 204);
+//   } catch (err) {
+//     next(err);
+//   }
+// };
