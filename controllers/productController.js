@@ -1,5 +1,5 @@
 import express from "express";
-import Product from "./../models/productModel.js";
+import { Product } from "./../models/productModel.js";
 import Shop from "./../models/shopModel.js";
 import { sendSuccessResponse, filterObj } from "./../utils/functions.js";
 import appError from "./../utils/appError.js";

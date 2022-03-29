@@ -32,15 +32,17 @@ router
 router
   .route("/myshop/:shopId/products")
   .post(
-    authController.requireSignIn,
+    // Uncomment these methods (commented just for testing)
+    // authController.requireSignIn,
     shopController.shopById,
-    shopController.isOwner,
+    // shopController.isOwner,
     shopController.addProductToMyShop
   )
   .delete(
-    authController.requireSignIn,
+    // Uncomment these methods (commented just for testing)
+    // authController.requireSignIn,
     shopController.shopById,
-    shopController.isOwner,
+    // shopController.isOwner,
     shopController.removeProductsFromMyShop
   );
 

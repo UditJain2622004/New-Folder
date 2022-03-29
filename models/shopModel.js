@@ -25,6 +25,12 @@ const shopSchema = new mongoose.Schema({
       ref: "Product",
     },
   ],
+  customProducts: [
+    {
+      type: mongoose.Schema.ObjectId,
+      ref: "Variation",
+    },
+  ],
   created: {
     type: Date,
     default: Date.now,
