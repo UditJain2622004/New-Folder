@@ -21,19 +21,6 @@ const checkVariations = (product, enteredDetails) => {
   return difference;
 };
 
-const addShopToProducts = (products, shopId) => {
-  products.forEach(async (el) => {
-    await Product.updateOne({ _id: el }, { $push: { shops: shopId } });
-  });
-};
-
-const removeShopFromProducts = (products, shopId) => {
-  products.forEach(
-    async (el) =>
-      await Product.updateOne({ _id: el }, { $pull: { shops: shopId } })
-  );
-};
-
 export const shopById = async (req, res, next) => {
   try {
     const shop = await Shop.findById(req.params.shopId);
@@ -65,7 +52,9 @@ export const getAllShops = async (req, res, next) => {
 
 export const getShopsOfAUser = async (req, res, next) => {
   try {
-    const shops = await Shop.find({ owner: req.params.userId });
+    const shops = await Shop.find({ owner: req.params.userId }).select(
+      "-owner -__v"
+    );
     if (!shops)
       return next(new appError("This user doesn't have any shops!", 400));
     sendSuccessResponse(res, 200, shops, "shops", shops.length);
@@ -76,9 +65,9 @@ export const getShopsOfAUser = async (req, res, next) => {
 
 export const getOneShop = async (req, res, next) => {
   try {
-    const shop = await Shop.findById(req.params.shopId)
-      .populate({ path: "owner", select: "_id email name" })
-      .populate({ path: "products", select: "-__v -created" });
+    const shop = await Shop.findById(req.params.shopId);
+    await shop.myPopulate();
+
     if (!shop) return next(new appError("No shop found!", 404));
     sendSuccessResponse(res, 200, shop, "shop");
   } catch (err) {
@@ -92,9 +81,9 @@ export const updateShop = async (req, res, next) => {
     const shop = await Shop.findByIdAndUpdate(req.params.shopId, req.body, {
       runValidators: true,
       new: true,
-    })
-      .populate({ path: "owner", select: "_id email name" })
-      .populate({ path: "products", select: "-__v -created" });
+    });
+
+    await shop.myPopulate();
 
     if (!shop) return next(new appError("Shop not found!", 404));
 
@@ -108,6 +97,11 @@ export const deleteShop = async (req, res, next) => {
   try {
     const shop = await Shop.findByIdAndDelete(req.params.shopId);
     if (!shop) return next(new appError("Shop not found!", 404));
+    await Variation.deleteMany({ shop: req.params.shopId });
+    await Product.updateMany(
+      { shops: { $in: [req.params.shopId] } },
+      { $pull: { shops: req.params.shopId } }
+    );
 
     sendSuccessResponse(res, 204);
   } catch (err) {
@@ -123,6 +117,7 @@ export const createShop = async (req, res, next) => {
     if (!owner.isSeller)
       return next(new appError("This user is not a seller!", 400));
     const shop = await Shop.create(req.body);
+    await shop.myPopulate();
     sendSuccessResponse(res, 201, shop, "shop");
   } catch (err) {
     next(err);
@@ -135,9 +130,10 @@ export const createMyShop = async (req, res, next) => {
   try {
     if (!req.user.isSeller)
       return next(new appError("You are not a seller!", 400));
-    const details = filterObj(req.body, "name", "description");
+    const details = filterObj(req.body, ["name", "description"]);
     details.owner = req.user._id;
     const shop = await Shop.create(details);
+    await shop.myPopulate();
     sendSuccessResponse(res, 201, shop, "shop");
   } catch (err) {
     next(err);
@@ -146,7 +142,7 @@ export const createMyShop = async (req, res, next) => {
 
 export const getMyShops = async (req, res, next) => {
   try {
-    const shops = await Shop.find({ owner: req.user._id });
+    const shops = await Shop.find({ owner: req.user._id }).select("-owner");
     if (!shops) return next(new appError("You don't have any shops!", 400));
     sendSuccessResponse(res, 200, shops, "shops", shops.length);
   } catch (err) {
@@ -156,25 +152,28 @@ export const getMyShops = async (req, res, next) => {
 
 export const updateMyShop = async (req, res, next) => {
   try {
-    const updates = filterObj(req.body, "name", "description");
+    const updates = filterObj(req.body, ["name", "description"]);
     updates.updated = Date.now();
     //prettier-ignore
-    const updatedShop = await Shop.findByIdAndUpdate(req.params.shopId, updates, { runValidators: true, new: true })
-    .populate({ path: "products", select: "-__v -created" });
+    const updatedShop = await Shop.findByIdAndUpdate(req.params.shopId, updates, { runValidators: true, new: true }).select("-owner")
+    await updatedShop.myPopulate();
     sendSuccessResponse(res, 200, updatedShop, "shop");
   } catch (err) {
     next(err);
   }
 };
 
-export const deleteMyShop = async (req, res, next) => {
-  try {
-    await Shop.findByIdAndDelete(req.params.shopId);
-    sendSuccessResponse(res, 204);
-  } catch (err) {
-    next(err);
-  }
-};
+//  TODO  ::::::  DELETING A SHOP SHOULD DELETE ALL OF ITS VARIATIONS AND REFERENCE OF THE SHOP IN PRODUCTS
+// export const deleteMyShop = async (req, res, next) => {
+//   try {
+//     await Shop.findByIdAndDelete(req.params.shopId);                            // IT'S SAME AS deleteShop so only that is used
+//     await Variation.deleteMany({ shop: req.params.shopId });
+//     await Product.updateMany({ shops: { $in: [req.params.shopId] } }, { $pull: { shops: req.params.shopId } })
+//     sendSuccessResponse(res, 204);
+//   } catch (err) {
+//     next(err);
+//   }
+// };
 
 export const addProductToMyShop = async (req, res, next) => {
   try {
@@ -196,16 +195,17 @@ export const addProductToMyShop = async (req, res, next) => {
 
         // When default product is changed
       } else {
-        shop = await Shop.findByIdAndUpdate(
-          req.shop._id,
-          { $addToSet: { customProducts: el } },
-          { runValidators: true, new: true }
-        );
         const variation = await Variation.create({
           shop: req.shop._id,
           product: product._id,
           variation: difference,
         });
+        shop = await Shop.findByIdAndUpdate(
+          req.shop._id,
+          { $addToSet: { customProducts: variation._id } },
+          { runValidators: true, new: true }
+        );
+
         // console.log(variation);
       }
 
@@ -215,7 +215,7 @@ export const addProductToMyShop = async (req, res, next) => {
         { $addToSet: { shops: req.shop._id } }
       );
     }
-
+    await shop.myPopulate();
     sendSuccessResponse(res, 200, shop, "shop");
   } catch (err) {
     next(err);
@@ -224,7 +224,6 @@ export const addProductToMyShop = async (req, res, next) => {
 
 export const removeProductsFromMyShop = async (req, res, next) => {
   try {
-    console.log(req.shop);
     let shop;
     //prettier-ignore
     for(const el of req.body.products){
@@ -237,10 +236,11 @@ export const removeProductsFromMyShop = async (req, res, next) => {
         await Product.updateOne({ _id: el }, { $pull: { shops: req.shop._id } })
           
       //prettier-ignore
-      } else if (req.shop.customProducts.includes(mongoose.Types.ObjectId(el))) {
+      } else if (await Variation.findOne({shop:req.shop._id,product:el})) {
+        const variation = await Variation.findOne({shop:req.shop._id,product:el})
         shop = await Shop.findByIdAndUpdate(
           req.shop._id,
-          { $pull: { customProducts: el } },
+          { $pull: { customProducts: variation._id } },
           { runValidators: true, new: true }
         );
       await Variation.deleteOne({shop:req.shop._id,product:el});
@@ -255,6 +255,7 @@ export const removeProductsFromMyShop = async (req, res, next) => {
     // }
     // const product = await Shop.findByIdAndUpdate(req.shop._id)
 
+    await shop.myPopulate();
     sendSuccessResponse(res, 200, shop, "shop");
   } catch (err) {
     next(err);

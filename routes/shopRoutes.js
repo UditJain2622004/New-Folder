@@ -26,7 +26,7 @@ router
     authController.requireSignIn,
     shopController.shopById,
     shopController.isOwner,
-    shopController.deleteMyShop
+    shopController.deleteShop
   );
 
 router

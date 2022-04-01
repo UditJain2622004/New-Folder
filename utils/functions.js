@@ -1,10 +1,19 @@
-export const filterObj = (obj, ...allowedFields) => {
+export const filterObj = (obj, allowedFields, negative) => {
   const newObj = {};
-  Object.keys(obj).forEach((el) => {
-    if (allowedFields.includes(el)) {
-      newObj[el] = obj[el];
-    }
-  });
+  if (negative) {
+    Object.keys(obj).forEach((el) => {
+      if (!allowedFields.includes(el)) {
+        newObj[el] = obj[el];
+      }
+    });
+  } else {
+    Object.keys(obj).forEach((el) => {
+      if (allowedFields.includes(el)) {
+        newObj[el] = obj[el];
+      }
+    });
+  }
+
   return newObj;
 };
 

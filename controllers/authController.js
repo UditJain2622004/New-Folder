@@ -37,7 +37,7 @@ const createSendToken = (user, res, statusCode) => {
 export const signup = async (req, res, next) => {
   try {
     //prettier-ignore
-    const details = filterObj(req.body,"name","email","password","passwordConfirm","isSeller");
+    const details = filterObj(req.body,["name","email","password","passwordConfirm","isSeller"]);
 
     const user = await User.create(details);
 

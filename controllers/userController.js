@@ -65,7 +65,7 @@ export async function updateMe(req, res, next) {
   try {
     if (req.body.password || req.body.passwordConfirm)
       return next(new appError("Go to /updatePassword!", 400));
-    let updates = filterObj(req.body, "name", "email", "isSeller");
+    let updates = filterObj(req.body, ["name", "email", "isSeller"]);
     updates.updated = Date.now();
 
     const user = await User.findByIdAndUpdate(req.user._id, updates, {
