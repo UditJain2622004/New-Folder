@@ -25,15 +25,15 @@ const shopSchema = new mongoose.Schema(
     products: [
       {
         type: mongoose.Schema.ObjectId,
-        ref: "Product",
-      },
-    ],
-    customProducts: [
-      {
-        type: mongoose.Schema.ObjectId,
         ref: "Variation",
       },
     ],
+    // customProducts: [
+    //   {
+    //     type: mongoose.Schema.ObjectId,
+    //     ref: "Variation",
+    //   },
+    // ],
     created: {
       type: Date,
       default: Date.now,
@@ -57,41 +57,50 @@ const shopSchema = new mongoose.Schema(
   }
 );
 
-// shopSchema.pre(/^find/, function (next) {
-// console.log(this);
-// console.log(this.op);
-// if (this.op !== "find") {
-//   console.log("yes");
-// }
-// this.populate({ path: "owner", select: "_id email name" }).populate({
-//   path: "products",
-//   select: "-__v -created",
-// });
-// console.log("yes");
-// next();
-// });
-
 shopSchema.methods.myPopulate = async function () {
   await this.populate([
     { path: "owner", select: "_id email name" },
-    { path: "products", select: "-__v -created" },
+    // { path: "products", select: "-__v -created" },
     {
-      path: "customProducts",
+      path: "products",
       select: "-__v -created",
       populate: { path: "product" },
     },
   ]);
 
   // To merge the product doc. with the variations
-  const customProducts = this.customProducts.map((el) => {
-    return merge(el.product, el.variation);
+  const customProducts = this.products.map((el) => {
+    merge(el.product.variables, el.variation);
+    return el.product;
   });
 
   shopSchema.virtual("allProducts").get(function () {
-    return [...this.products, ...customProducts];
+    return customProducts;
   });
   return this;
 };
+
+// shopSchema.methods.myPopulate = async function () {
+//   await this.populate([
+//     { path: "owner", select: "_id email name" },
+//     { path: "products", select: "-__v -created" },
+//     {
+//       path: "customProducts",
+//       select: "-__v -created",
+//       populate: { path: "product" },
+//     },
+//   ]);
+
+//   // To merge the product doc. with the variations
+//   const customProducts = this.customProducts.map((el) => {
+//     return merge(el.product, el.variation);
+//   });
+
+//   shopSchema.virtual("allProducts").get(function () {
+//     return [...this.products, ...customProducts];
+//   });
+//   return this;
+// };
 
 // shopSchema.methods.allProducts = function () {
 //   if (this.populated("products") || this.populated("customProducts")) {

@@ -3,106 +3,87 @@ import clonedeep from "lodash.clonedeep";
 
 // export const addProductToMyShop = async (req, res, next) => {
 //   try {
-//     const product = await Product.findById(req.body.products[0]);
+//     let shop;
 
-//     // Check if the product has been changed
-//     const difference = checkVariations(product, req.body.details);
+//     for (const [i, el] of req.body.products.entries()) {
+//       const product = await Product.findById(el);
 
-//     // When there is no change in product
-//     if (isEmpty(difference)) {
-//       const shop = await Shop.findByIdAndUpdate(
-//         req.shop._id,
-//         { $addToSet: { products: req.body.products } },
-//         { runValidators: true, new: true }
-//       );
+//       // Check if the product has been changed
+//       const difference = checkVariations(product, req.body.details[i]);
+//       console.log(difference);
 
-//       // When default product is changed
-//     } else {
-//       const shop = await Shop.findByIdAndUpdate(
-//         req.shop._id,
-//         { $addToSet: { customProducts: req.body.products } },
-//         { runValidators: true, new: true }
-//       );
-//       const variation = await Variation.create({
-//         shop: req.shop._id,
-//         product: product._id,
-//         variation: difference,
-//       });
-//       console.log(variation);
+//       //   // When there is no change in product
+//         if (isEmpty(difference)) {
+//           shop = await Shop.findByIdAndUpdate(
+//             req.shop._id,
+//             { $addToSet: { products: el } },
+//             { runValidators: true, new: true }
+//           );
+
+//           // When default product is changed
+//         } else {
+//           const variation = await Variation.create({
+//             shop: req.shop._id,
+//             product: product._id,
+//             variation: difference,
+//           });
+//           shop = await Shop.findByIdAndUpdate(
+//             req.shop._id,
+//             { $addToSet: { customProducts: variation._id } },
+//             { runValidators: true, new: true }
+//           );
+
+//           // console.log(variation);
+//         }
+
+//         //  Adding shopId into shops field of products
+//         await Product.updateOne(
+//           { _id: product._id },
+//           { $addToSet: { shops: req.shop._id } }
+//         );
 //     }
-
-//     //  Adding shopId into shops field of products
-//     await Product.updateOne(
-//       { _id: product._id },
-//       { $addToSet: { shops: req.shop._id } }
-//     );
-
-//     // const shop = await Shop.findByIdAndUpdate(                                     // ADD MULTIPLE ITEMS TO ARRAY
-//     //   req.shop._id,
-//     //   { $addToSet: { products: { $each: req.body.products } } },
-//     //   { runValidators: true, new: true }
-//     // );
-//     // addShopToProducts(req.body.products, req.shop._id);
-//     // sendSuccessResponse(res, 200, shop, "shop");
-//     sendSuccessResponse(res, 200, "World", "Hello");
+//     await shop.myPopulate();
+//     sendSuccessResponse(res, 200, shop, "shop");
 //   } catch (err) {
 //     next(err);
 //   }
 // };
 
-// export const addProductToMyShop2 = async (req, res, next) => {
+// export const removeProductsFromMyShop = async (req, res, next) => {
 //   try {
 //     let shop;
-//     // req.body.products.forEach(function (el, i) {
-//     //   console.log(el, i);
-//     // });
-//     // for (const [i, el] of req.body.products.entries()) {
-
-//     // }
-//     req.body.products.forEach(async function (el, i) {
-//       const product = await Product.findById(el);
-//       // Check if the product has been changed
-//       const difference = checkVariations(product, req.body.details[i]);
-
-//       // When there is no change in product
-//       if (isEmpty(difference)) {
+//     //prettier-ignore
+//     for(const el of req.body.products){
+//       if (req.shop.products.includes(mongoose.Types.ObjectId(el))) {
 //         shop = await Shop.findByIdAndUpdate(
 //           req.shop._id,
-//           { $addToSet: { products: el } },
-//           { runValidators: true, new: true }
-//         );
+//           { $pull: { products: el } },
+//           {runValidators: true, new: true}
+//           );
+//         await Product.updateOne({ _id: el }, { $pull: { shops: req.shop._id } })
 
-//         // When default product is changed
-//       } else {
+//       //prettier-ignore
+//       } else if (await Variation.findOne({shop:req.shop._id,product:el})) {
+//         const variation = await Variation.findOne({shop:req.shop._id,product:el})
 //         shop = await Shop.findByIdAndUpdate(
 //           req.shop._id,
-//           { $addToSet: { customProducts: el } },
+//           { $pull: { customProducts: variation._id } },
 //           { runValidators: true, new: true }
 //         );
-//         const variation = await Variation.create({
-//           shop: req.shop._id,
-//           product: product._id,
-//           variation: difference,
-//         });
-//         // console.log(variation);
+//       await Variation.deleteOne({shop:req.shop._id,product:el});
+//       await Product.updateOne({ _id:el }, { $pull: { shops: req.shop._id } })
+
 //       }
+//     }
 
-//       //  Adding shopId into shops field of products
-//       await Product.updateOne(
-//         { _id: product._id },
-//         { $addToSet: { shops: req.shop._id } }
-//       );
-//     });
-//     console.log(shop);
-//     sendSuccessResponse(res, 200, req.shop, "shop");
+//     //  IF PRODUCT NOT FOUND IN SHOP (TO SEND AN ERROR USE THIS OR JUST IGNORE THE PRODUCT)
+//     // else{
+//     //   return next(new appError("You don't have this product"),400)
+//     // }
+//     // const product = await Shop.findByIdAndUpdate(req.shop._id)
 
-//     // const shop = await Shop.findByIdAndUpdate(                                     // ADD MULTIPLE ITEMS TO ARRAY
-//     //   req.shop._id,
-//     //   { $addToSet: { products: { $each: req.body.products } } },
-//     //   { runValidators: true, new: true }
-//     // );
-//     // addShopToProducts(req.body.products, req.shop._id);
-//     // sendSuccessResponse(res, 200, shop, "shop");
+//     await shop.myPopulate();
+//     sendSuccessResponse(res, 200, shop, "shop");
 //   } catch (err) {
 //     next(err);
 //   }

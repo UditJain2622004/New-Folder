@@ -183,37 +183,61 @@ export const addProductToMyShop = async (req, res, next) => {
       const product = await Product.findById(el);
 
       // Check if the product has been changed
-      const difference = checkVariations(product, req.body.details[i]);
+      const difference = checkVariations(
+        product.variables,
+        req.body.details[i]
+      );
+      console.log(difference);
 
-      // When there is no change in product
-      if (isEmpty(difference)) {
-        shop = await Shop.findByIdAndUpdate(
-          req.shop._id,
-          { $addToSet: { products: el } },
-          { runValidators: true, new: true }
-        );
+      const variation = await Variation.create({
+        shop: req.shop._id,
+        product: product._id,
+        variation: difference,
+      });
 
-        // When default product is changed
-      } else {
-        const variation = await Variation.create({
-          shop: req.shop._id,
-          product: product._id,
-          variation: difference,
-        });
-        shop = await Shop.findByIdAndUpdate(
-          req.shop._id,
-          { $addToSet: { customProducts: variation._id } },
-          { runValidators: true, new: true }
-        );
+      // bcz no variation will be created if the shop already has this product
+      if (!variation) continue;
 
-        // console.log(variation);
-      }
+      shop = await Shop.findByIdAndUpdate(
+        req.shop._id,
+        { $addToSet: { products: variation._id } },
+        { runValidators: true, new: true }
+      );
 
-      //  Adding shopId into shops field of products
       await Product.updateOne(
         { _id: product._id },
         { $addToSet: { shops: req.shop._id } }
       );
+
+      //   // When there is no change in product
+      //   if (isEmpty(difference)) {
+      //     shop = await Shop.findByIdAndUpdate(
+      //       req.shop._id,
+      //       { $addToSet: { products: el } },
+      //       { runValidators: true, new: true }
+      //     );
+
+      //     // When default product is changed
+      //   } else {
+      //     const variation = await Variation.create({
+      //       shop: req.shop._id,
+      //       product: product._id,
+      //       variation: difference,
+      //     });
+      //     shop = await Shop.findByIdAndUpdate(
+      //       req.shop._id,
+      //       { $addToSet: { products: variation._id } },
+      //       { runValidators: true, new: true }
+      //     );
+
+      //     // console.log(variation);
+      //   }
+
+      //   //  Adding shopId into shops field of products
+      //   await Product.updateOne(
+      //     { _id: product._id },
+      //     { $addToSet: { shops: req.shop._id } }
+      //   );
     }
     await shop.myPopulate();
     sendSuccessResponse(res, 200, shop, "shop");
@@ -225,35 +249,25 @@ export const addProductToMyShop = async (req, res, next) => {
 export const removeProductsFromMyShop = async (req, res, next) => {
   try {
     let shop;
-    //prettier-ignore
-    for(const el of req.body.products){
-      if (req.shop.products.includes(mongoose.Types.ObjectId(el))) {
-        shop = await Shop.findByIdAndUpdate(
-          req.shop._id,
-          { $pull: { products: el } },
-          {runValidators: true, new: true}
-          );
-        await Product.updateOne({ _id: el }, { $pull: { shops: req.shop._id } })
-          
-      //prettier-ignore
-      } else if (await Variation.findOne({shop:req.shop._id,product:el})) {
-        const variation = await Variation.findOne({shop:req.shop._id,product:el})
-        shop = await Shop.findByIdAndUpdate(
-          req.shop._id,
-          { $pull: { customProducts: variation._id } },
-          { runValidators: true, new: true }
-        );
-      await Variation.deleteOne({shop:req.shop._id,product:el});
-      await Product.updateOne({ _id:el }, { $pull: { shops: req.shop._id } })
-  
+    for (const el of req.body.products) {
+      const variation = await Variation.findOne({
+        shop: req.shop._id,
+        product: el,
+      });
+      if (!variation) continue;
+      shop = await Shop.findByIdAndUpdate(
+        req.shop._id,
+        { $pull: { products: variation._id } },
+        { runValidators: true, new: true }
+      );
+      await Variation.deleteOne({ shop: req.shop._id, product: el });
+      const product = await Product.findByIdAndUpdate(el, {
+        $pull: { shops: req.shop._id },
+      });
+      if ((product.lowestPriceShop = req.shop._id)) {
+        await product.setLowestPriceAndShop();
       }
     }
-
-    //  IF PRODUCT NOT FOUND IN SHOP (TO SEND AN ERROR USE THIS OR JUST IGNORE THE PRODUCT)
-    // else{
-    //   return next(new appError("You don't have this product"),400)
-    // }
-    // const product = await Shop.findByIdAndUpdate(req.shop._id)
 
     await shop.myPopulate();
     sendSuccessResponse(res, 200, shop, "shop");

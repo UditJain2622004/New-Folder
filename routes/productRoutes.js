@@ -18,7 +18,10 @@ router
 
 router
   .route("/shop/:shopId")
-  .get(shopController.shopById, productController.getProductsByShop)
+  .get(shopController.shopById, productController.getProductsByShop);
+
+router
+  .route("/myShop/:shopId")
   .post(
     authController.requireSignIn,
     shopController.shopById,
@@ -26,14 +29,12 @@ router
     productController.createMyProduct
   );
 
-router
-  .route("/:productId/shop/:shopId")
-  .patch(
-    authController.requireSignIn,
-    shopController.shopById,
-    shopController.isOwner,
-    productController.updateMyProduct
-  );
+router.route("/:productId/myShop/:shopId").patch(
+  // authController.requireSignIn,
+  shopController.shopById,
+  // shopController.isOwner,
+  productController.updateMyProduct
+);
 // .delete(
 //   authController.requireSignIn,
 //   shopController.shopById,
