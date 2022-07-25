@@ -32,19 +32,23 @@ export const getAllProducts = async (req, res, next) => {
 
     const productsWithLowestPrice = [];
 
+    // iterate over all product docs to add the shop which has the lowest selling price for that product
     for (const el of products) {
+      // find all variations of product and sort them based on price
       let variations = await Variation.find({
         product: el._id,
       })
         .sort("variation.price")
         .lean();
 
+      // filter out all Variation docs which has no variation
       variations = variations.filter((el) => el.variation !== undefined);
 
       //prettier-ignore
       if ( variations.length !== 0 && variations[0].variation && variations[0].variation.price && el.variables) {
         if (variations[0].variation.price < el.variables.price) {
           
+          // merge the variables of Product doc with those of Variation doc which has lowest price
            merge(el.variables , variations[0].variation)
           el.shop = variations[0].shop;
           el.shops = undefined;
@@ -86,6 +90,7 @@ export const getOneProduct = async (req, res, next) => {
       .lean();
     if (!product) return next(new appError("Product not found!", 400));
 
+    // find all variations of the product
     const variations = await Variation.find({
       product: req.params.productId,
     });
@@ -97,6 +102,7 @@ export const getOneProduct = async (req, res, next) => {
     if (variations.length !== 0) {
       // const details = { price: product.price, quantity: product.quantity };
 
+      // create docs with variables merged with Variations docs
       const products = variations.map((el) => {
         let copy = clonedeep(product.variables);
         // console.log(el.variation);
@@ -109,11 +115,13 @@ export const getOneProduct = async (req, res, next) => {
       products.sort(sortingFunction);
       // console.log(products);
 
+      // set product(the one to send in response) details equal to the 1st doc of sorted product docs(which will be the doc with lowest price shop set)
       product.shop = products[0].shop;
       merge(product.variables, products[0].details);
 
       products.shift();
 
+      // all other shops are specified in an array named otherShops
       product.otherShops = products.map((el) => {
         return { shop: el.shop, details: el.details };
       });
@@ -183,13 +191,13 @@ export const getOneProduct = async (req, res, next) => {
 //             NOT COMPLETED
 export const getProductsByShop = async (req, res, next) => {
   try {
-    // const products = await Product.find({ shop: req.params.shopId });
-    const products = await Shop.findById(req.params.shopId)
+    
+    const products = await Shop.findById(req.params.shopId)                       // get a Shop document
       .populate({
-        path: "products",
+        path: "products",                                                         // populate its "product" field which actually contains Variations docs' ids
         select: " -created -__v",
-        populate: { path: "product", select: "-shops -__v" },
-      })
+        populate: { path: "product", select: "-shops -__v" },                     // populate the "product" field of those Variation docs which contains Products docs ids
+      }) 
       .lean();
     // const products = await req.shop.populate({
     //   path: "products",
@@ -199,7 +207,7 @@ export const getProductsByShop = async (req, res, next) => {
 
     const populatedProducts = products.products.map((el) => {
       console.log(el.product);
-      if (el.variation) {
+      if (el.variation) {                                                // if the Variation doc has a field named variation
         merge(el.product.variables, el.variation);
       }
       // console.log(el.product);
@@ -275,12 +283,15 @@ export const updateMyProduct = async (req, res, next) => {
       product: req.params.productId,
       shop: req.shop._id,
     }).populate("product");
+    
     product.variation = merge(product.variation, req.body);
+    
     await product.save();
     product.product.variables = merge(
       product.product.variables,
       product.variation
     );
+    
     // console.log(product);
     // console.log(product.variation);
     // const details = await Product.findOne({
@@ -309,7 +320,7 @@ export const deleteProduct = async (req, res, next) => {
     const product = await Product.findByIdAndDelete(req.params.productId);
     if (!product) return next(new appError("Product not found!", 404));
 
-    const variations = await Variation.find({
+    const variations = await Variation.find({                     // find all variations of the deleted product
       product: req.params.productId,
     });
     if (variations) {
@@ -319,7 +330,7 @@ export const deleteProduct = async (req, res, next) => {
       // const shops = await Shop.find({ products: { $in: variationIds } });
       // console.log(shops);
 
-      await Shop.updateMany(
+      await Shop.updateMany(                                       // pull all variations of deleted product from all shops
         { products: { $in: variationIds } },
         { $pull: { products: { $in: variationIds } } }
       );
